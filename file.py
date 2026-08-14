@@ -1,91 +1,107 @@
 import streamlit as st
-from streamlit_cookies_controller import CookieController
 
 # НАСТРОЙКА СТРАНИЦЫ
 st.set_page_config(page_title="Чат 6 'Б'", page_icon="💬", layout="wide")
 st.title("💬 Мессенджер 6 класса")
-
-# Инициализируем контроллер куки (память браузера)
-cookies = CookieController()
 
 # ОБЩАЯ ПАМЯТЬ СЕРВЕРА
 @st.cache_resource
 class SharedChat:
     def __init__(self):
         self.messages = [
-            {"name": "Система", "text": "Добро пожаловать в защищенный чат 6 класса! 🎉", "avatar": "🤖"}
+            {"name": "Система", "text": "Добро пожаловать в супер-защищенный чат! 🔐", "avatar": "🤖"}
         ]
-        self.users_db = {
-            "kain": "boss6b"
+        self.announcement = ""
+        # 🎭 Переменная для пранка (изначально пустая)
+        self.fake_user = ""
+        
+        # 🔑 ТАБЛИЦА СЕКРЕТНЫХ КЛЮЧЕЙ (Токенов) И ИМЁН
+        self.tokens_db = {
+            "boss_kain_777": "kain",    # Твой секретный ключ админа
+            "artem_key_31": "Артем",
+            "zera_pass_99": "Зарина",
+            "art_token_55": "Артём",
+            "6354_secret_12": "Эмилия",
+            "lenaid_83463": "Лена",
+            "markovka6583": "Марк"
         }
 
 chat_storage = SharedChat()
 
-# ПРОВЕРЯЕМ: Помнит ли браузер этого пользователя?
-saved_user = cookies.get("saved_user_6b")
+# ЧИТАЕМ СЕКРЕТНЫЙ КЛЮЧ ИЗ ССЫЛКИ
+query_params = st.query_params
+user_token = query_params.get("token", None)
 
-login_success = False
-current_user = ""
-
-# Если браузер помнит имя, сразу пускаем в чат без пароля!
-if saved_user and saved_user in chat_storage.users_db:
-    login_success = True
-    current_user = saved_user
-
-# Если браузер никого не помнит — показываем форму входа/регистрации
-if not login_success:
-    st.sidebar.header("🚪 Личный кабинет")
-    menu_mode = st.sidebar.radio("Выберите действие:", ["Войти", "Регистрация"])
-
-    if menu_mode == "Регистрация":
-        st.sidebar.subheader("📝 Создать новый аккаунт")
-        reg_name = st.sidebar.text_input("Придумайте ник (имя):", key="reg_n")
-        reg_pass = st.sidebar.text_input("Придумайте пароль:", type="password", key="reg_p")
-        
-        if st.sidebar.button("Зарегистрироваться"):
-            if not reg_name.strip() or not reg_pass.strip():
-                st.sidebar.error("❌ Имя и пароль не могут быть пустыми!")
-            elif reg_name in chat_storage.users_db:
-                st.sidebar.error("❌ Этот ник уже занят!")
-            elif len(chat_storage.users_db) >= 8:
-                st.sidebar.error("❌ В чате уже максимум участников (8 человек)!")
-            else:
-                chat_storage.users_db[reg_name] = reg_pass
-                st.sidebar.success("🎉 Зарегистрировано! Теперь переключитесь на 'Войти'.")
-
+if user_token in chat_storage.tokens_db:
+    real_user = chat_storage.tokens_db[user_token]
+    
+    # 🎭 ЛОГИКА МАСКИРОВКИ: Если админ включил пранк, подменяем его имя
+    if real_user == "kain" and chat_storage.fake_user != "":
+        current_user = chat_storage.fake_user
     else:
-        st.sidebar.subheader("🔑 Вход в систему")
-        login_name = st.sidebar.text_input("Введите имя:", key="log_n")
-        login_pass = st.sidebar.text_input("Введите пароль:", type="password", key="log_p")
+        current_user = real_user
         
-        if st.sidebar.button("Войти"):
-            if login_name in chat_storage.users_db and chat_storage.users_db[login_name] == login_pass:
-                # 📜 ВАЖНЫЙ ШАГ: Прячем имя в память браузера на долгое время
-                cookies.set("saved_user_6b", login_name)
-                st.rerun()
-            else:
-                st.sidebar.error("❌ Неверное имя или пароль!")
-
-# --- ГЛАВНЫЙ ЭКРАН (ОТКРЫВАЕТСЯ ДЛЯ ТЕХ, КТО МИШУРАНУЛ ВХОД ИЛИ КОГО ПОМНЯТ) ---
-if login_success:
-    st.sidebar.success(f"Вы вошли как: {current_user} 😎")
+    st.sidebar.success(f"Вход выполнен! Вы вошли как: {current_user} 😎")
+    if real_user == "kain" and chat_storage.fake_user != "":
+        st.sidebar.warning(f"⚠️ Включен режим маскировки под: {chat_storage.fake_user}")
     
-    # Кнопка «Выйти», чтобы сбросить авто-вход
-    if st.sidebar.button("🚪 Выйти из аккаунта"):
-        cookies.remove("saved_user_6b")
-        st.rerun()
+    if chat_storage.announcement:
+        st.warning(f"📢 **ВАЖНОЕ ОБЪЯВЛЕНИЕ ОТ АДМИНА:** {chat_storage.announcement}")
     
-    # 👑 СЕКРЕТНАЯ АДМИНКА ДЛЯ KAIN
-    if current_user == "kain":
+    # 👑 СЕКРЕТНОЕ МЕНЮ АДМИНА ДЛЯ KAIN (Доступно только по твоему НАСТОЯЩЕМУ токену)
+    if real_user == "kain":
         st.sidebar.markdown("---")
-        st.sidebar.subheader("👑 Меню создателя")
-        st.sidebar.write("Участники в базе:", list(chat_storage.users_db.keys()))
+        st.sidebar.subheader("👑 МЕНЮ СОЗДАТЕЛЯ (ПРОКАЧАННОЕ)")
         
-        ban_name = st.sidebar.text_input("Кого вычеркнуть (забанить)?")
-        if st.sidebar.button("🔨 Забанить"):
-            if ban_name in chat_storage.users_db and ban_name != "kain":
-                del chat_storage.users_db[ban_name]
-                st.sidebar.warning(f"Пользователь {ban_name} удален!")
+        # 🎭 ФИЧА ПРАНКА: Выбор жертвы для маскировки
+        st.sidebar.markdown("### 🎭 Режим маскировки")
+        # Получаем список всех имен в чате, кроме самого kain
+        all_users = [name for name in chat_storage.tokens_db.values() if name != "kain"]
+        target_prank = st.sidebar.selectbox("Выберите кого разыграть:", all_users)
+        
+        if st.sidebar.button("🕵️‍♂️ Включить маскировку"):
+            chat_storage.fake_user = target_prank
+            st.rerun()
+            
+        if st.sidebar.button("❌ Сбросить маскировку (Стать kain)"):
+            chat_storage.fake_user = ""
+            st.rerun()
+            
+        st.sidebar.markdown("---")
+        
+        # Управление объявлением
+        new_announcement = st.sidebar.text_input("Создать объявление для всех:")
+        if st.sidebar.button("📢 Опубликовать объявление"):
+            chat_storage.announcement = new_announcement
+            st.rerun()
+        if st.sidebar.button("🚫 Удалить объявление"):
+            chat_storage.announcement = ""
+            st.rerun()
+            
+        st.sidebar.markdown("---")
+        
+        # Очистка чата
+        if st.sidebar.button("🧹 ОЧИСТИТЬ ВЕСЬ ЧАТ"):
+            chat_storage.messages = [
+                {"name": "Система", "text": "Чат был полностью очищен администратором kain! 🧼", "avatar": "🤖"}
+            ]
+            st.sidebar.success("История сообщений стерта!")
+            st.rerun()
+            
+        st.sidebar.markdown("---")
+        
+        # Шпионский список токенов
+        with st.sidebar.expander("👁️ Посмотреть список ключей"):
+            st.write("Слева ключ, справа имя:")
+            st.json(chat_storage.tokens_db)
+        
+        # Функция бана
+        ban_token = st.sidebar.text_input("Введите КЛЮЧ (токен) для бана:")
+        if st.sidebar.button("🔨 Забанить пользователя"):
+            if ban_token in chat_storage.tokens_db and ban_token != "boss_kain_777":
+                deleted_user = chat_storage.tokens_db[ban_token]
+                del chat_storage.tokens_db[ban_token]
+                st.sidebar.warning(f"Пользователь {deleted_user} успешно забанен!")
                 st.rerun()
 
     # ОТОБРАЖЕНИЕ ЧАТА
@@ -101,7 +117,9 @@ if login_success:
 
     st.markdown("---")
 
+    # ОТПРАВКА СООБЩЕНИЯ
     if message := st.chat_input("Напишите сообщение..."):
+        # Если маскировка включена, аватарка будет как у обычного игрока
         user_avatar = "👑" if current_user == "kain" else "🎒"
         chat_storage.messages.append({
             "name": current_user,
@@ -111,5 +129,5 @@ if login_success:
         st.rerun()
 
 else:
-    if 'menu_mode' in locals() and menu_mode == "Войти":
-        st.info("👋 Введите свои данные слева, чтобы войти в мессенджер.")
+    st.error("<code>❌ Доступ заблокирован! Неверный или отсутствующий ключ авторизации.</code>", icon="🔒")
+    st.info("ℹ️ Для входа в мессенджер используйте только свою персональную ссылку, выданную kain.")
