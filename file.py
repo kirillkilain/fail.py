@@ -1,6 +1,7 @@
 import streamlit as st
 from datetime import datetime
 import pytz
+import os
 
 # НАСТРОЙКА СТРАНИЦЫ
 st.set_page_config(page_title="Чат 6 'Б'", page_icon="💬", layout="wide")
@@ -9,17 +10,21 @@ st.title("💬 Мессенджер 6 класса")
 # Твой часовой пояс (Пермский край)
 LOCAL_TZ = pytz.timezone("Asia/Yekaterinburg")
 
-# ОБЩАЯ ПАМЯТЬ СЕРВЕРА
+# Определяем надежное место для хранения файла в облаке
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+CHAT_FILE = os.path.join(BASE_DIR, "chat_history.txt")
+
+# Если файла с историей еще нет на сервере, создаем его
+if not os.path.exists(CHAT_FILE):
+    with open(CHAT_FILE, "w", encoding="utf-8") as f:
+        f.write("Система|Добро пожаловать в вечный чат 6 класса! 🔐|🤖\n")
+
+# ОБЩАЯ ПАМЯТЬ СЕРВЕРА (Для онлайна и пранков)
 @st.cache_resource
 class SharedChat:
     def __init__(self):
-        self.messages = [
-            {"name": "Система", "text": "Добро пожаловать в мессенджер с индикатором онлайна! 🔐", "avatar": "🤖"}
-        ]
         self.announcement = ""
         self.fake_user = ""
-        
-        # Общая база онлайна (имя: время последнего действия)
         self.online_users = {}
         
         # 🔑 ТАБЛИЦА СЕКРЕТНЫХ КЛЮЧЕЙ И ИМЁН
@@ -50,21 +55,17 @@ if user_token in chat_storage.tokens_db:
         
     st.sidebar.success(f"Вход выполнен! Вы вошли как: {current_user} 😎")
     
-    # 🕒 ОБНОВЛЯЕМ СТАТУС ОНЛАЙН (Записываем текущее время в базу сервера)
+    # ОБНОВЛЯЕМ СТАТУС ОНЛАЙН
     now_local = datetime.now(LOCAL_TZ)
     chat_storage.online_users[real_user] = now_local
 
-    # 🟢 БЛОК ОТОБРАЖЕНИЯ ОНЛАЙНА НА БОКОВОЙ ПАНЕЛИ
+    # БЛОК ОТОБРАЖЕНИЯ ОНЛАЙНА
     st.sidebar.markdown("---")
     st.sidebar.subheader("👥 Кто в сети:")
-    
     for token_key, username in chat_storage.tokens_db.items():
-        # Считаем, сколько секунд назад юзер подавал знак жизни
         if username in chat_storage.online_users:
             last_seen = chat_storage.online_users[username]
             seconds_passed = (datetime.now(LOCAL_TZ) - last_seen).total_seconds()
-            
-            # Если прошло меньше 10 секунд — он онлайн!
             if seconds_passed < 10:
                 st.sidebar.write(f"🟢 **{username}** (в сети)")
             else:
@@ -97,16 +98,16 @@ if user_token in chat_storage.tokens_db:
             chat_storage.announcement = new_announcement
             st.rerun()
         
-        # Очистка чата
+        # Жесткая очистка файла чата
         if st.sidebar.button("🧹 ОЧИСТИТЬ ВЕСЬ ЧАТ"):
-            chat_storage.messages = [{"name": "Система", "text": "Чат очищен админом kain! 🧼", "avatar": "🤖"}]
+            with open(CHAT_FILE, "w", encoding="utf-8") as f:
+                f.write("Система|Чат был полностью очищен администратором kain! 🧼|🤖\n")
             st.rerun()
             
-        # Список ключей
         with st.sidebar.expander("👁️ Список ключей"):
             st.json(chat_storage.tokens_db)
 
-    # 🔄 МАГИЯ АВТО-ОБНОВЛЕНИЯ ЧАТА И ОНЛАЙНА
+    # 🔄 МАГИЯ ВЕЧНОГО АВТО-ОБНОВЛЕНИЯ ЧАТА ИЗ ФАЙЛА
     @st.fragment(run_every="3s")
     def show_chat():
         if chat_storage.announcement:
@@ -114,24 +115,28 @@ if user_token in chat_storage.tokens_db:
             
         st.subheader("📋 История сообщений")
         
-        for msg in chat_storage.messages:
-            with st.chat_message(msg["name"], avatar=msg["avatar"]):
-                st.write(f"**{msg['name']}**")
-                st.write(msg["text"])
+        # Читаем сообщения прямо из вечного текстового файла
+        if os.path.exists(CHAT_FILE):
+            with open(CHAT_FILE, "r", encoding="utf-8") as f:
+                lines = f.readlines()
+            
+            for line in lines:
+                if "|" in line:
+                    msg_name, msg_text, msg_avatar = line.strip().split("|", 2)
+                    with st.chat_message(msg_name, avatar=msg_avatar):
+                        st.write(f"**{msg_name}**")
+                        st.write(msg_text)
 
-    # Запускаем наш обновляемый блок чата
     show_chat()
-
     st.markdown("---")
 
-    # ОТПРАВКА СООБЩЕНИЯ
+    # ОТПРАВКА СООБЩЕНИЯ (С записью в файл)
     if message := st.chat_input("Напишите сообщение..."):
         user_avatar = "👑" if current_user == "kain" else "🎒"
-        chat_storage.messages.append({
-            "name": current_user,
-            "text": message,
-            "avatar": user_avatar
-        })
+        
+        # Записываем строчку в файл на сервере через разделитель "|"
+        with open(CHAT_FILE, "a", encoding="utf-8") as f:
+            f.write(f"{current_user}|{message}|{user_avatar}\n")
         st.rerun()
 
 else:
