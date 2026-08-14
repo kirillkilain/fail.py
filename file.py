@@ -1,30 +1,36 @@
 import streamlit as st
-import time
+from datetime import datetime
+import pytz
 
 # НАСТРОЙКА СТРАНИЦЫ
 st.set_page_config(page_title="Чат 6 'Б'", page_icon="💬", layout="wide")
 st.title("💬 Мессенджер 6 класса")
+
+# Твой часовой пояс (Пермский край)
+LOCAL_TZ = pytz.timezone("Asia/Yekaterinburg")
 
 # ОБЩАЯ ПАМЯТЬ СЕРВЕРА
 @st.cache_resource
 class SharedChat:
     def __init__(self):
         self.messages = [
-            {"name": "Система", "text": "Добро пожаловать в супер-защищенный чат! 🔐", "avatar": "🤖"}
+            {"name": "Система", "text": "Добро пожаловать в мессенджер с индикатором онлайна! 🔐", "avatar": "🤖"}
         ]
         self.announcement = ""
         self.fake_user = ""
         
+        # Общая база онлайна (имя: время последнего действия)
+        self.online_users = {}
+        
         # 🔑 ТАБЛИЦА СЕКРЕТНЫХ КЛЮЧЕЙ И ИМЁН
-        # ⚠️ Не забудь переписать сюда свои настоящие 7 имён и ключей, которые ты настроил!
         self.tokens_db = {
             "boss_kain_777": "kain",
-            "artem_key_31": "Артем 1",     # Твой токен №2
-            "zera_pass_99": "Зарина",      # Твой токен №3
-            "art_token_55": "Артем 2",     # Твой токен №4 (Второй Артем!)
-            "6354_secret_12": "Эмилия",    # Твой токен №5
-            "lenaid_83463": "Лена",        # Твой токен №6
-            "markovka6583": "Марк"         # Твой токен №7
+            "artem_key_31": "Артем 1",
+            "zera_pass_99": "Зарина",
+            "art_token_55": "Артем 2",
+            "6354_secret_12": "Эмилия",
+            "lenaid_83463": "Лена",
+            "markovka6583": "Марк"
         }
 
 chat_storage = SharedChat()
@@ -36,7 +42,7 @@ user_token = query_params.get("token", None)
 if user_token in chat_storage.tokens_db:
     real_user = chat_storage.tokens_db[user_token]
     
-    # Режим маскировки
+    # Режим маскировки для пранков
     if real_user == "kain" and chat_storage.fake_user != "":
         current_user = chat_storage.fake_user
     else:
@@ -44,6 +50,28 @@ if user_token in chat_storage.tokens_db:
         
     st.sidebar.success(f"Вход выполнен! Вы вошли как: {current_user} 😎")
     
+    # 🕒 ОБНОВЛЯЕМ СТАТУС ОНЛАЙН (Записываем текущее время в базу сервера)
+    now_local = datetime.now(LOCAL_TZ)
+    chat_storage.online_users[real_user] = now_local
+
+    # 🟢 БЛОК ОТОБРАЖЕНИЯ ОНЛАЙНА НА БОКОВОЙ ПАНЕЛИ
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("👥 Кто в сети:")
+    
+    for token_key, username in chat_storage.tokens_db.items():
+        # Считаем, сколько секунд назад юзер подавал знак жизни
+        if username in chat_storage.online_users:
+            last_seen = chat_storage.online_users[username]
+            seconds_passed = (datetime.now(LOCAL_TZ) - last_seen).total_seconds()
+            
+            # Если прошло меньше 10 секунд — он онлайн!
+            if seconds_passed < 10:
+                st.sidebar.write(f"🟢 **{username}** (в сети)")
+            else:
+                st.sidebar.write(f"⚪ *{username}* (был недавно)")
+        else:
+            st.sidebar.write(f"⚪ *{username}* (не в сети)")
+
     # 👑 СЕКРЕТНОЕ МЕНЮ АДМИНА ДЛЯ KAIN
     if real_user == "kain":
         st.sidebar.markdown("---")
@@ -78,7 +106,7 @@ if user_token in chat_storage.tokens_db:
         with st.sidebar.expander("👁️ Список ключей"):
             st.json(chat_storage.tokens_db)
 
-    # 🔄 МАГИЯ АВТО-ОБНОВЛЕНИЯ (Блок st.fragment обновляется сам по таймеру)
+    # 🔄 МАГИЯ АВТО-ОБНОВЛЕНИЯ ЧАТА И ОНЛАЙНА
     @st.fragment(run_every="3s")
     def show_chat():
         if chat_storage.announcement:
@@ -86,7 +114,6 @@ if user_token in chat_storage.tokens_db:
             
         st.subheader("📋 История сообщений")
         
-        # Вывод сообщений из памяти сервера
         for msg in chat_storage.messages:
             with st.chat_message(msg["name"], avatar=msg["avatar"]):
                 st.write(f"**{msg['name']}**")
