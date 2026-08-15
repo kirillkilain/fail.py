@@ -197,16 +197,16 @@ if user_token in chat_storage.tokens_db:
             st.sidebar.write(f"{'🟢' if sec < 10 else '⚪'} **{username}** ({get_rank(username)})")
         else: st.sidebar.write(f"⚪ *{username}* (оффлайн) ({get_rank(username)})")
 
-    # --- 🔄 АВТО-ОБНОВЛЕНИЕ ОТОБРАЖЕНИЯ КОМНАТ ---
-    @st.fragment(run_every="4s")
-    def show_chat_history(mode, target):
-        if mode == "🏫 Чат с Учителем":
-            st.subheader("🏫 Официальный чат 6 'Б' (С Учителем)")
-            for msg in chat_storage.teacher_messages:
-                with st.chat_message(msg["name"], avatar=msg["avatar"]):
-                    st.write(f"**{msg['name']}**" if msg["name"] == "Система" else f"**{msg['name']}** ({get_rank(msg['name'])})")
-                    st.write(msg["text"])
-        elif mode == "🤫 Чат БЕЗ Учителя":
-            st.subheader("🤫 Секретный чат (БЕЗ Учителя)")
-            for msg in chat_storage.messages:
-                with st.chat_message(msg["name"], avatar=msg["avatar"]):
+    # --- ВЫВОД ИСТОРИИ КОМНАТ (Чистая и простая логика без вложений) ---
+    if chat_mode == "🏫 Чат с Учителем":
+        st.subheader("🏫 Официальный чат 6 'Б' (С Учителем)")
+        for msg in chat_storage.teacher_messages:
+            with st.chat_message(msg["name"], avatar=msg["avatar"]):
+                st.write(f"**{msg['name']}**" if msg["name"] == "Система" else f"**{msg['name']}** ({get_rank(msg['name'])})")
+                st.write(msg["text"])
+                
+    elif chat_mode == "🤫 Чат БЕЗ Учителя":
+        st.subheader("🤫 Секретный чат (БЕЗ Учителя)")
+        for msg in chat_storage.messages:
+            with st.chat_message(msg["name"], avatar=msg["avatar"]):
+                st.write(f"**{msg['name']}**" if msg["name"] == "Система" else f"**{msg['name']}** ({get_rank(msg['name'])})")
