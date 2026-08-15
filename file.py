@@ -26,7 +26,7 @@ USER_AGENTS = [
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36"
 ]
 
-# СВЕРХНАДЕЖНАЯ ФУНКЦИЯ ГЕНЕРАЦИИ (Вынесена отдельно от интерфейса)
+# СВЕРХНАДЕЖНАЯ ФУНКЦИЯ ГЕНЕРАЦИИ
 def generate_warp_config():
     st_data = {"key": "", "install_id": "", "fcm_token": ""}
     url = "https://cloudflareclient.com"
@@ -203,7 +203,7 @@ if user_token in chat_storage.tokens_db:
         if last_spin_date == today_date and current_user != "kain":
             st.sidebar.warning("⏳ Слот заблокирован до завтра!")
         else:
-            if st.sidebar.button("🎰 Крутить слоты!"):
+            if st.sidebar.button("🎰 :grey_exclamation: Крутить слоты!"):
                 chat_storage.casino_history[current_user] = today_date
                 slots = ["🍒", "🍋", "💎", "7️⃣", "🍉"]
                 res1, res2, res3 = random.choice(slots), random.choice(slots), random.choice(slots)
@@ -220,11 +220,13 @@ if user_token in chat_storage.tokens_db:
                     st.rerun()
                 else: st.sidebar.error("😢 Мимо!")
 
-    # --- 👑 ПУЛЬТ СОЗДАТЕЛЯ (Только для реального kain) ---
+    # --- 👑 ПУЛЬТ СОЗДАТЕЛЯ (Плоская структура без вложенных IF) ---
     if real_user == "kain":
         st.sidebar.markdown("---")
         st.sidebar.subheader("👑 ПУЛЬТ СОЗДАТЕЛЯ")
         
-        target_user = st.sidebar.selectbox("Ученик:", [""] + active_names)
-        new_rank = st.sidebar.selectbox("Ранг:", ["Обычный Человек", "Модератор (Мут)", "Временный Админ (Бан)"])
-        if target_user and st.sidebar.button("⭐ Применить ранг"):
+        target_user = st.sidebar.selectbox("Ученик:", active_names)
+        new_rank = st.sidebar.selectbox("Ранг:", ["Обычный Человек", "Модератор (Мут)", "Временный  Админ (Бан)"])
+        
+        if st.sidebar.button("⭐ Применить ранг"):
+            if target_user in chat_storage.moderators: chat_storage.moderators.remove(target_user)
