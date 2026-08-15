@@ -4,8 +4,8 @@ import pytz
 import os
 
 # НАСТРОЙКА СТРАНИЦЫ
-st.set_page_config(page_title="Чат ебанутых", page_icon="💬", layout="wide")
-st.title("💬 Мессенджер 6 класса")
+st.set_page_config(page_title="6666666", page_icon="💬", layout="wide")
+st.title("💬 оооооооооо")
 
 # Твой часовой пояс (Пермский край)
 LOCAL_TZ = pytz.timezone("Asia/Yekaterinburg")
@@ -13,6 +13,9 @@ LOCAL_TZ = pytz.timezone("Asia/Yekaterinburg")
 # Определяем надежное место для хранения файла в облаке
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CHAT_FILE = os.path.join(BASE_DIR, "chat_history.txt")
+CHAT_FILE = os.path.join(BASE_DIR, "chat_history.txt")
+ANN_FILE = os.path.join(BASE_DIR, "announcement.txt") # Новая строчка!
+
 
 # Если файла с историей еще нет на сервере, создаем его
 if not os.path.exists(CHAT_FILE):
