@@ -3,6 +3,8 @@ from datetime import datetime
 import pytz
 import os
 import random
+import json
+import urllib.request
 
 # НАСТРОЙКА СТРАНИЦЫ
 st.set_page_config(page_title="Чат 6 'Б'", page_icon="💬", layout="wide")
@@ -15,6 +17,14 @@ LOCAL_TZ = pytz.timezone("Asia/Yekaterinburg")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CHAT_FILE = os.path.join(BASE_DIR, "chat_history.txt")
 TEACHER_CHAT_FILE = os.path.join(BASE_DIR, "teacher_chat_history.txt")
+
+# База фальшивых браузеров для обхода блокировок Cloudflare при генерации
+USER_AGENTS = [
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Safari/605.1.15",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/119.0",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36"
+]
 
 # ОБЩАЯ СВЕРХБЫСТРАЯ ПАМЯТЬ СЕРВЕРА
 @st.cache_resource
@@ -29,7 +39,7 @@ class SharedChat:
         self.casino_history = {}
         self.private_messages = {}
         
-        # 🔑 ТВОЯ ТАБЛИЦА ТОКЕНОВ С УЧИТЕЛЕМ (ИДЕАЛЬНЫЙ СИНТАКСИС)
+        # 🔑 ТВОЯ ТАБЛИЦА ТОКЕНОВ
         self.tokens_db = {
             "boss_kain_777": "kain",
             "artem_key_31": "Артем 1",
@@ -176,10 +186,12 @@ if user_token in chat_storage.tokens_db:
                     st.rerun()
                 else: st.sidebar.error("😢 Мимо!")
 
-    # --- ПУЛЬТ СОЗДАТЕЛЯ ---
+    # --- 👑 ГЛАВНЫЙ ПУЛЬТ СОЗДАТЕЛЯ (Только для реального kain) ---
     if real_user == "kain":
         st.sidebar.markdown("---")
         st.sidebar.subheader("👑 ПУЛЬТ СОЗДАТЕЛЯ")
+        
+        # 🔧 Управление рангами
         target_user = st.sidebar.selectbox("Ученик:", [""] + active_names)
         new_rank = st.sidebar.selectbox("Ранг:", ["Обычный Человек", "Модератор (Мут)", "Временный Админ (Бан)"])
         if target_user and st.sidebar.button("⭐ Применить ранг"):
@@ -189,27 +201,19 @@ if user_token in chat_storage.tokens_db:
             elif new_rank == "Временный Админ (Бан)": chat_storage.admins.append(target_user)
             st.rerun()
             
-        if st.sidebar.button("🧹 СБРОСИТЬ ВСЕ ЧАТЫ"):
-            chat_storage.moderators, chat_storage.admins, chat_storage.muted_users, chat_storage.casino_history = [], [], [], {}
-            chat_storage.messages = [{"name": "Система", "text": "Чат сброшен Создателем kain! 🧼", "avatar": "🤖"}]
-            chat_storage.teacher_messages = [{"name": "Система", "text": "Чат с учителем сброшен! 🏫", "avatar": "🤖"}]
-            if os.path.exists(CHAT_FILE): os.remove(CHAT_FILE)
-            if os.path.exists(TEACHER_CHAT_FILE): os.remove(TEACHER_CHAT_FILE)
-            st.rerun()
-
-    # --- ОНЛАЙН СТАТУСЫ ---
-    st.sidebar.markdown("---")
-    st.sidebar.subheader("👥 В сети:")
-    for token_key, username in chat_storage.tokens_db.items():
-        if username in chat_storage.online_users:
-            sec = (datetime.now(LOCAL_TZ) - chat_storage.online_users[username]).total_seconds()
-            st.sidebar.write(f"{'🟢' if sec < 10 else '⚪'} **{username}** ({get_rank(username)})")
-        else: st.sidebar.write(f"⚪ *{username}* (оффлайн) ({get_rank(username)})")
-
-    # --- ВЫВОД ИСТОРИИ КОМНАТ ---
-    if chat_mode == "🏫 Чат с Учителем":
-        st.subheader("🏫 Официальный чат 6 'Б' (С Учителем)")
-        for msg in chat_storage.teacher_messages:
-            with st.chat_message(msg["name"], avatar=msg["avatar"]):
-                st.write(f"**{msg['name']}**" if msg["name"] == "Система" else f"**{msg['name']}** ({get_rank(msg['name'])})")
-                st.write(msg["text"])
+        # 🕵️‍♂️ Маскировка
+        target_prank = st.sidebar.selectbox("Маскировка под:", active_names)
+        if st.sidebar.button("🕵️‍♂️ Маскировка"): chat_storage.fake_user = target_prank; st.rerun()
+        if st.sidebar.button("❌ Сброс маскировки"): chat_storage.fake_user = ""; st.rerun()
+        
+        # ⚡ ВСТРОЕННЫЙ ХАКЕРСКИЙ ГЕНЕРАТОР VPN ⚡
+        st.sidebar.markdown("---")
+        st.sidebar.subheader("⚡ Завод вечных VPN (WARP)")
+        gen_count = st.sidebar.slider("Сколько конфигов выдать?", 1, 5, 1)
+        
+        if st.sidebar.button("🛠️ Сгенерировать файлы .conf"):
+            st.sidebar.info("Запуск генерации через Cloudflare...")
+            for i in range(gen_count):
+                st_data = {"key": "", "install_id": "", "fcm_token": ""}
+                url = "https://cloudflareclient.com"
+                try:
