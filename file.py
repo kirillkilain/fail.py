@@ -206,3 +206,26 @@ if user_token in chat_storage.tokens_db:
     st.markdown("---")
 
     # --- ОТПРАВКА СООБЩЕНИЯ ---
+    # В чате с учителем писать можно ВСЕМ и всегда, а в остальных — проверка на мут
+    if chat_mode != "🏫 Чат с Учителем" and current_user in chat_storage.muted_users:
+        st.error("🔇 Ты замучен администрацией!")
+    else:
+        if message := st.chat_input("Напишите сообщение..."):
+            user_avatar = "👑" if current_user == "kain" else "🎒"
+            
+            if chat_mode == "🏫 Чат с Учителем":
+                chat_storage.teacher_messages.append({"name": current_user, "text": message, "avatar": user_avatar})
+                with open(TEACHER_CHAT_FILE, "a", encoding="utf-8") as f:
+                    f.write(f"{current_user}|{message}|{user_avatar}\n")
+            elif chat_mode == "🤫 Чат БЕЗ Учителя":
+                chat_storage.messages.append({"name": current_user, "text": message, "avatar": user_avatar})
+                with open(CHAT_FILE, "a", encoding="utf-8") as f:
+                    f.write(f"{current_user}|{message}|{user_avatar}\n")
+            else:
+                pair = tuple(sorted([current_user, dm_target]))
+                private_list = load_private_chat(current_user, dm_target)
+                private_list.append({"name": current_user, "text": message, "avatar": user_avatar})
+                filename = os.path.join(BASE_DIR, f"private_{pair}_{pair}.txt")
+                with open(filename, "a", encoding="utf-8") as f:
+                    f.write(f"{current_user}|{message}|{user_avatar}\n")
+            st.rerun()
