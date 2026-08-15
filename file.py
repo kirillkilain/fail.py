@@ -4,7 +4,7 @@ import pytz
 import os
 
 # НАСТРОЙКА СТРАНИЦЫ
-st.set_page_config(page_title="Чат 6 'Б'", page_icon="💬", layout="wide")
+st.set_page_config(page_title="Чат ебанутых", page_icon="💬", layout="wide")
 st.title("💬 Мессенджер 6 класса")
 
 # Твой часовой пояс (Пермский край)
