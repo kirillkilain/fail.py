@@ -84,14 +84,14 @@ def load_private_chat(u1, u2):
                     chat_storage.private_messages[pair].append({"name": m_name, "text": m_text, "avatar": m_avatar})
     return chat_storage.private_messages[pair]
 
-# 🔄 МАГИЯ АВТО-АВТОРИЗАЦИИ (Ищем токен в ссылке или в памяти приложения)
+# 🔄 МАГИЯ АВТО-АВТОРИЗАЦИИ
 query_params = st.query_params
 url_token = query_params.get("token", None)
 
 if url_token:
     st.session_state["user_token"] = url_token
 
-# Если токена нет ни в ссылке, ни в памяти — показываем форму авторизации
+# Если токена нет — форма ввода
 if "user_token" not in st.session_state:
     st.subheader("🔒 Авторизация в системе Ферамир")
     input_token = st.text_input("Введите ваш персональный секретный токен для входа:", type="password")
@@ -105,7 +105,7 @@ if "user_token" not in st.session_state:
     st.info("ℹ️ Если у вас нет токена, обратитесь к Создателю чата (kain).")
     st.stop()
 
-# Дальнейший код выполняется, только если авторизация успешна
+# Дальнейший код выполняется после авторизации
 user_token = st.session_state["user_token"]
 
 if user_token in chat_storage.tokens_db:
@@ -140,7 +140,7 @@ if user_token in chat_storage.tokens_db:
         chat_storage.user_statuses[current_user] = new_status
         st.rerun()
 
-    # --- КАЗИК РАЗ В ДЕНЬ (Только в чате БЕЗ учителя) ---
+    # --- КАЗИК РАЗ В ДЕНЬ ---
     if chat_mode == "🤫 Чат БЕЗ Учителя":
         st.sidebar.markdown("---")
         st.sidebar.markdown("### 🎰 Казик на Админки")
@@ -201,7 +201,7 @@ if user_token in chat_storage.tokens_db:
     @st.fragment(run_every="4s")
     def show_chat_history(mode, target):
         if mode == "🏫 Чат с Учителем":
-            st.subheader("🏫 Официальный chat 6 'Б' (С Учителем)")
+            st.subheader("🏫 Официальный чат 6 'Б' (С Учителем)")
             for msg in chat_storage.teacher_messages:
                 with st.chat_message(msg["name"], avatar=msg["avatar"]):
                     st.write(f"**{msg['name']}**" if msg["name"] == "Система" else f"**{msg['name']}** ({get_rank(msg['name'])})")
@@ -209,3 +209,4 @@ if user_token in chat_storage.tokens_db:
         elif mode == "🤫 Чат БЕЗ Учителя":
             st.subheader("🤫 Секретный чат (БЕЗ Учителя)")
             for msg in chat_storage.messages:
+                with st.chat_message(msg["name"], avatar=msg["avatar"]):
