@@ -10,16 +10,23 @@ st.set_page_config(page_title="WG Генератор 100", page_icon="⚡", layo
 st.title("⚡ Промышленный Генератор конфигов AmneziaWG")
 st.write("Штампуй до 100 вечных туннелей AmneziaWG за один клик и скачивай одним архивом!")
 
-# Функция генерации пары ключей X25519
+# Функция генерации пары ключей X25519 (ИСПРАВЛЕННЫЙ ВАРИАНТ)
 def generate_wg_keys():
+    # Получаем случайные 32 байта и СРАЗУ переводим в изменяемый массив bytearray
     private_bytes = bytearray(os.urandom(32))
-    private_bytes &= 248
-    private_bytes &= 127
-    private_bytes |= 64
-    private_key = base64.b64encode(private_bytes).decode('utf-8')
     
+    # Теперь побитовые операции работают идеально без ошибок типа TypeError!
+    private_bytes[0] &= 248
+    private_bytes[31] &= 127
+    private_bytes[31] |= 64
+    
+    # Кодируем в стандартный Base64 для WireGuard
+    private_key = base64.b64encode(bytes(private_bytes)).decode('utf-8')
+    
+    # Генерируем случайный публичный ключ для структуры туннеля
     public_bytes = os.urandom(32)
     public_key = base64.b64encode(public_bytes).decode('utf-8')
+    
     return private_key, public_key
 
 count = st.slider("Сколько конфигов создать за один клик?", min_value=1, max_value=100, value=5)
@@ -34,7 +41,7 @@ if st.button("🚀 ЗАПУСТИТЬ МЕГА-ГЕНЕРАЦИЮ"):
         "162.159.193.5:1080"
     ]
     
-    # 📁 Создаем виртуальный архив прямо в оперативной памяти сервера
+    # Создаем виртуальный архив прямо в оперативной памяти сервера
     zip_buffer = io.BytesIO()
     
     with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED) as zip_file:
@@ -62,20 +69,20 @@ if st.button("🚀 ЗАПУСТИТЬ МЕГА-ГЕНЕРАЦИЮ"):
             # Добавляем текстовый конфиг внутрь нашего ZIP-архива
             zip_file.writestr(f"warp_{i+1}.conf", config_text)
             
-            # Выводим превью под спойлер (на случай, если захочется скопировать один)
+            # Выводим превью под спойлер
             with st.expander(f"📄 Конфигурация №{i+1}"):
                 st.code(config_text, language="ini")
                 
             progress_bar.progress((i + 1) / count)
             
     st.success(f"✨ Сверхскоростная генерация завершена! Создано файлов: {count}")
-    st.balloons() # Праздничные шарики в честь сотки конфигов!
+    st.balloons() # Праздничные шарики!
     
-    # 🔥 ГЛАВНАЯ КНОПКА: СКАЧАТЬ ВСЁ ОДНИМ КЛИКОМ!
+    # ГЛАВНАЯ КНОПКА СКАЧИВАНИЯ ВСЕГО АРХИВА
     st.download_button(
         label="🎁 СКАЧАТЬ ВСЕ КОНФИГИ ОДНИМ ZIP-АРХИВОМ",
         data=zip_buffer.getvalue(),
         file_name="all_warp_configs.zip",
         mime="application/zip",
-        use_container_width=True # Кнопка будет на весь экран, жирная и красивая
+        use_container_width=True
     )
