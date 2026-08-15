@@ -29,7 +29,7 @@ class SharedChat:
         self.casino_history = {}
         self.private_messages = {}
         
-        # 🔑 ТВОЯ ТАБЛИЦА ТОКЕНОВ
+        # 🔑 ТВОЯ ТАБЛИЦА ТОКЕНОВ С УЧИТЕЛЕМ (ИДЕАЛЬНЫЙ СИНТАКСИС)
         self.tokens_db = {
             "boss_kain_777": "kain",
             "artem_key_31": "Артем 1",
@@ -37,7 +37,8 @@ class SharedChat:
             "art_token_55": "Артем 2",
             "6354_secret_12": "Эмилия",
             "lenaid_83463": "Лена",
-            "markovka6583": "Марк"
+            "markovka6583": "Марк",
+            "secret_teacher_6b": "Мария Ивановна"
         }
         
         # 1. Загружаем чат БЕЗ учителя
@@ -98,7 +99,6 @@ if "user_token" not in st.session_state:
     if st.button("🚀 Войти в мессенджер"):
         if input_token in chat_storage.tokens_db:
             st.session_state["user_token"] = input_token
-            # 🔥 ХАКЕРСКИЙ ШТРИХ: Намертво вшиваем токен в адресную строку браузера!
             st.query_params["token"] = input_token
             st.success("Успешный вход! Загрузка чата...")
             st.rerun()
