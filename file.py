@@ -3,7 +3,6 @@ from datetime import datetime
 import pytz
 import os
 import random
-from streamlit_cookies_controller import CookieController
 
 # НАСТРОЙКА СТРАНИЦЫ
 st.set_page_config(page_title="Чат 6 'Б'", page_icon="💬", layout="wide")
@@ -11,9 +10,6 @@ st.title("🔥 Чат Ферамир")
 
 # Твой часовой пояс (Пермский край)
 LOCAL_TZ = pytz.timezone("Asia/Yekaterinburg")
-
-# Инициализируем контроллер куки (память устройства)
-cookies_controller = CookieController()
 
 # Пути к файлам в облаке
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -88,27 +84,22 @@ def load_private_chat(u1, u2):
                     chat_storage.private_messages[pair].append({"name": m_name, "text": m_text, "avatar": m_avatar})
     return chat_storage.private_messages[pair]
 
-# 🔄 МАГИЯ КУКИ И ССЫЛОК: Ищем токен везде
-query_params = st.query_params
-url_token = query_params.get("token", None)
+# 🔄 УМНЫЙ ПОИСК ТОКЕНА В АДРЕСНОЙ СТРОКЕ
+if "user_token" not in st.session_state:
+    query_params = st.query_params
+    url_token = query_params.get("token", None)
+    if url_token:
+        st.session_state["user_token"] = url_token
 
-# Проверяем, сохранен ли токен уже в памяти браузера (куки)
-saved_cookie_token = cookies_controller.get("saved_user_token")
-
-if url_token:
-    st.session_state["user_token"] = url_token
-    cookies_controller.set("saved_user_token", url_token) # Сохраняем в память устройства
-elif saved_cookie_token:
-    st.session_state["user_token"] = saved_cookie_token # Подтягиваем из куки автоматически
-
-# Если токена нигде нет — показываем окно ввода
+# Если токена нет вообще — показываем окно ввода
 if "user_token" not in st.session_state:
     st.subheader("🔒 Авторизация в системе Ферамир")
     input_token = st.text_input("Введите ваш персональный секретный токен для входа:", type="password")
     if st.button("🚀 Войти в мессенджер"):
         if input_token in chat_storage.tokens_db:
             st.session_state["user_token"] = input_token
-            cookies_controller.set("saved_user_token", input_token) # Намертво прячем в память браузера
+            # 🔥 ХАКЕРСКИЙ ШТРИХ: Намертво вшиваем токен в адресную строку браузера!
+            st.query_params["token"] = input_token
             st.success("Успешный вход! Загрузка чата...")
             st.rerun()
         else:
@@ -116,7 +107,7 @@ if "user_token" not in st.session_state:
     st.info("ℹ️ Если у вас нет токена, обратитесь к Создателю чата (kain).")
     st.stop()
 
-# Дальнейший код выполняется после успешной авторизации
+# Читаем проверенный токен
 user_token = st.session_state["user_token"]
 
 if user_token in chat_storage.tokens_db:
@@ -126,11 +117,11 @@ if user_token in chat_storage.tokens_db:
     st.sidebar.success(f"Вы вошли как: {current_user} 😎")
     chat_storage.online_users[real_user] = datetime.now(LOCAL_TZ)
 
-    # Кнопка «Выйти из аккаунта» на всякий случай
-    if st.sidebar.button("🚪 Выйти"):
-        cookies_controller.remove("saved_user_token")
+    # Удобная кнопка выхода
+    if st.sidebar.button("🚪 Выйти из аккаунта"):
         if "user_token" in st.session_state:
             del st.session_state["user_token"]
+        st.query_params.clear()
         st.rerun()
 
     # --- 🔀 ВЫБОР КОМНАТЫ ---
@@ -213,3 +204,12 @@ if user_token in chat_storage.tokens_db:
         if username in chat_storage.online_users:
             sec = (datetime.now(LOCAL_TZ) - chat_storage.online_users[username]).total_seconds()
             st.sidebar.write(f"{'🟢' if sec < 10 else '⚪'} **{username}** ({get_rank(username)})")
+        else: st.sidebar.write(f"⚪ *{username}* (оффлайн) ({get_rank(username)})")
+
+    # --- ВЫВОД ИСТОРИИ КОМНАТ ---
+    if chat_mode == "🏫 Чат с Учителем":
+        st.subheader("🏫 Официальный чат 6 'Б' (С Учителем)")
+        for msg in chat_storage.teacher_messages:
+            with st.chat_message(msg["name"], avatar=msg["avatar"]):
+                st.write(f"**{msg['name']}**" if msg["name"] == "Система" else f"**{msg['name']}** ({get_rank(msg['name'])})")
+                st.write(msg["text"])
