@@ -2,25 +2,26 @@ import streamlit as st
 import base64
 import os
 import random
+import zipfile
+import io
 
 # НАСТРОЙКА СТРАНИЦЫ
 st.set_page_config(page_title="WG Генератор 100", page_icon="⚡", layout="centered")
 st.title("⚡ Промышленный Генератор конфигов AmneziaWG")
-st.write("Штампуй до 100 вечных туннелей AmneziaWG за один клик без ограничений!")
+st.write("Штампуй до 100 вечных туннелей AmneziaWG за один клик и скачивай одним архивом!")
 
 # Функция генерации пары ключей X25519
 def generate_wg_keys():
     private_bytes = bytearray(os.urandom(32))
-    private_bytes[0] &= 248
-    private_bytes[31] &= 127
-    private_bytes[31] |= 64
+    private_bytes &= 248
+    private_bytes &= 127
+    private_bytes |= 64
     private_key = base64.b64encode(private_bytes).decode('utf-8')
     
     public_bytes = os.urandom(32)
     public_key = base64.b64encode(public_bytes).decode('utf-8')
     return private_key, public_key
 
-# 🔥 ПОДНЯЛИ ЛИМИТ ДО 100 КОНФИГОВ ЗА РАЗ!
 count = st.slider("Сколько конфигов создать за один клик?", min_value=1, max_value=100, value=5)
 
 if st.button("🚀 ЗАПУСТИТЬ МЕГА-ГЕНЕРАЦИЮ"):
@@ -33,9 +34,11 @@ if st.button("🚀 ЗАПУСТИТЬ МЕГА-ГЕНЕРАЦИЮ"):
         "162.159.193.5:1080"
     ]
     
-    for i in range(count):
-        # 📦 Упаковываем каждый конфиг в красивый спойлер, чтобы сайт не лагал при сотке файлов
-        with st.expander(f"📄 Конфигурация №{i+1}"):
+    # 📁 Создаем виртуальный архив прямо в оперативной памяти сервера
+    zip_buffer = io.BytesIO()
+    
+    with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED) as zip_file:
+        for i in range(count):
             private_key, public_key = generate_wg_keys()
             
             config_text = (
@@ -56,16 +59,23 @@ if st.button("🚀 ЗАПУСТИТЬ МЕГА-ГЕНЕРАЦИЮ"):
                 "H4 = 4"
             )
             
-            st.code(config_text, language="ini")
+            # Добавляем текстовый конфиг внутрь нашего ZIP-архива
+            zip_file.writestr(f"warp_{i+1}.conf", config_text)
             
-            st.download_button(
-                label=f"📥 Скачать файл warp_{i+1}.conf",
-                data=config_text,
-                file_name=f"warp_{i+1}.conf",
-                mime="text/plain",
-                key=f"abtn_{i}_{random.randint(1,999999)}"
-            )
+            # Выводим превью под спойлер (на случай, если захочется скопировать один)
+            with st.expander(f"📄 Конфигурация №{i+1}"):
+                st.code(config_text, language="ini")
+                
+            progress_bar.progress((i + 1) / count)
             
-        progress_bar.progress((i + 1) / count)
-        
     st.success(f"✨ Сверхскоростная генерация завершена! Создано файлов: {count}")
+    st.balloons() # Праздничные шарики в честь сотки конфигов!
+    
+    # 🔥 ГЛАВНАЯ КНОПКА: СКАЧАТЬ ВСЁ ОДНИМ КЛИКОМ!
+    st.download_button(
+        label="🎁 СКАЧАТЬ ВСЕ КОНФИГИ ОДНИМ ZIP-АРХИВОМ",
+        data=zip_buffer.getvalue(),
+        file_name="all_warp_configs.zip",
+        mime="application/zip",
+        use_container_width=True # Кнопка будет на весь экран, жирная и красивая
+    )
