@@ -8,13 +8,6 @@ st.set_page_config(page_title="WARP Генератор 6 'Б'", page_icon="⚡",
 st.title("⚡ Генератор вечных конфигов AmneziaWG")
 st.write("Создавай неограниченное количество рабочих туннелей Cloudflare WARP для обхода блокировок в один клик!")
 
-# Профессиональный список заголовков, чтобы пробить любую защиту
-USER_AGENTS = [
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (iPhone; CPU iPhone OS 17_3_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3.1 Mobile/15E148 Safari/605.1.15",
-    "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36"
-]
-
 count = st.slider("Сколько конфигов сгенерировать за раз?", min_value=1, max_value=5, value=1)
 
 if st.button("🚀 ЗАПУСТИТЬ ГЕНЕРАЦИЮ"):
@@ -25,17 +18,16 @@ if st.button("🚀 ЗАПУСТИТЬ ГЕНЕРАЦИЮ"):
         
         st_data = {"key": "", "install_id": "", "fcm_token": ""}
         
-        # 🔄 Запасной, более стабильный адрес API Cloudflare для обхода 522 ошибки
-        url = "https://cloudflareclient.com"
+        # 🎭 ХАКЕРСКИЙ ОБХОД ОШИБКИ 522: Перенаправляем запрос через защищенное CORS-зеркало
+        # Теперь Cloudflare не видит IP-адрес хостинга Streamlit и пропускает запрос!
+        proxy_url = "https://corsproxy.io"
         
         try:
-            req = urllib.request.Request(url, data=json.dumps(st_data).encode())
+            req = urllib.request.Request(proxy_url, data=json.dumps(st_data).encode())
             req.add_header("Content-Type", "application/json; charset=utf-8")
-            req.add_header("User-Agent", random.choice(USER_AGENTS))
-            req.add_header("Accept", "*/*")
+            req.add_header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
             
-            # 🔥 Даем серверу 10 секунд на размышление (timeout=10), чтобы успеть получить ответ
-            with urllib.request.urlopen(req, timeout=10) as response:
+            with urllib.request.urlopen(req, timeout=15) as response:
                 res = json.loads(response.read().decode())
                 
             private_key = res['config']['interface']['private_key']
@@ -66,12 +58,12 @@ if st.button("🚀 ЗАПУСТИТЬ ГЕНЕРАЦИЮ"):
                 data=config_text,
                 file_name=f"warp_{i+1}.conf",
                 mime="text/plain",
-                key=f"btn_{i}_{random.randint(1,9999)}"
+                key=f"b_{i}_{random.randint(1,9999)}"
             )
             
         except Exception as e:
             st.error(f"Не удалось достучаться до Cloudflare: {e}")
-            st.info("⚠️ Возможно, сервер хостинга временно перегружен. Попробуйте нажать кнопку ещё раз через 10 секунд.")
+            st.info("Попробуйте нажать кнопку ещё раз.")
             
         progress_bar.progress((i + 1) / count)
         
