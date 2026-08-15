@@ -55,7 +55,7 @@ def get_rank(username):
     if username not in chat_storage.tokens_db.values(): return "🔨 ЗАБАНЕН"
     if username in chat_storage.admins: return "🏆 Временный Админ"
     if username in chat_storage.moderators: return "⚡ Модератор (Мут)"
-    return "🎒 Обычный Чебурек"
+    return "🎒 Обычный человек"
 
 # ЧИТАЕМ СЕКРЕТНЫЙ КЛЮЧ ИЗ ССЫЛКИ
 query_params = st.query_params
