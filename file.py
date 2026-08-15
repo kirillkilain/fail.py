@@ -69,7 +69,7 @@ def get_rank(username):
     if username not in chat_storage.tokens_db.values(): return "🔨 ЗАБАНЕН"
     if username in chat_storage.admins: return "🏆 Временный Админ"
     if username in chat_storage.moderators: return "⚡ Модератор (Мут)"
-    return "🎒 Обычный Чебурек"
+    return "🎒 Обычный человек"
 
 def load_private_chat(u1, u2):
     pair = tuple(sorted([u1, u2]))
