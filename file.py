@@ -89,9 +89,9 @@ query_params = st.query_params
 url_token = query_params.get("token", None)
 
 if url_token:
-    st.session_state["user_token"] = url_token # Запоминаем токен из ссылки
+    st.session_state["user_token"] = url_token
 
-# Если токена нет ни в ссылке, ни в памяти — показываем красивое окно ввода!
+# Если токена нет ни в ссылке, ни в памяти — показываем форму авторизации
 if "user_token" not in st.session_state:
     st.subheader("🔒 Авторизация в системе Ферамир")
     input_token = st.text_input("Введите ваш персональный секретный токен для входа:", type="password")
@@ -103,9 +103,9 @@ if "user_token" not in st.session_state:
         else:
             st.error("Неверный токен! Доступ заблокирован.")
     st.info("ℹ️ Если у вас нет токена, обратитесь к Создателю чата (kain).")
-    st.stop() # Останавливаем выполнение кода, пока чел не введет токен
+    st.stop()
 
-# Дальнейший код выполняется, только если токен ПРАВИЛЬНЫЙ
+# Дальнейший код выполняется, только если авторизация успешна
 user_token = st.session_state["user_token"]
 
 if user_token in chat_storage.tokens_db:
@@ -140,7 +140,7 @@ if user_token in chat_storage.tokens_db:
         chat_storage.user_statuses[current_user] = new_status
         st.rerun()
 
-    # --- КАЗИК РАЗ В ДЕНЬ ---
+    # --- КАЗИК РАЗ В ДЕНЬ (Только в чате БЕЗ учителя) ---
     if chat_mode == "🤫 Чат БЕЗ Учителя":
         st.sidebar.markdown("---")
         st.sidebar.markdown("### 🎰 Казик на Админки")
@@ -197,15 +197,15 @@ if user_token in chat_storage.tokens_db:
             st.sidebar.write(f"{'🟢' if sec < 10 else '⚪'} **{username}** ({get_rank(username)})")
         else: st.sidebar.write(f"⚪ *{username}* (оффлайн) ({get_rank(username)})")
 
-    # --- 🔄 АВТО-ОБНОВЛЕНИЕ ---
+    # --- 🔄 АВТО-ОБНОВЛЕНИЕ ОТОБРАЖЕНИЯ КОМНАТ ---
     @st.fragment(run_every="4s")
     def show_chat_history(mode, target):
         if mode == "🏫 Чат с Учителем":
-            st.subheader("🏫 Официальный чат 6 'Б' (С Учителем)")
+            st.subheader("🏫 Официальный chat 6 'Б' (С Учителем)")
             for msg in chat_storage.teacher_messages:
                 with st.chat_message(msg["name"], avatar=msg["avatar"]):
                     st.write(f"**{msg['name']}**" if msg["name"] == "Система" else f"**{msg['name']}** ({get_rank(msg['name'])})")
                     st.write(msg["text"])
         elif mode == "🤫 Чат БЕЗ Учителя":
             st.subheader("🤫 Секретный чат (БЕЗ Учителя)")
-for msg in chat_storage.messages:with st.chat_message(msg["name"], avatar=msg["avatar"]):st.write(f"{msg['name']}" if msg["name"] == "Система" else f"{msg['name']} ({get_rank(msg['name'])})")st.write(msg["text"])else:st.subheader(f"🔒 Секретный диалог с: {target}")private_list = load_private_chat(current_user, target)if private_list:for msg in private_list:with st.chat_message(msg["name"], avatar=msg["avatar"]):st.write(f"{msg['name']} ({get_rank(msg['name'])})")st.write(msg["text"])else: st.info("🤫 Тут пока пусто.")show_chat_history(chat_mode, dm_target)st.markdown("---")# --- ОТПРАВКА СООБЩЕНИЯ ---if chat_mode != "🏫 Чат с Учителем" and current_user in chat_storage.muted_users:st.error("🔇 Ты замучен администрацией!")else:if message := st.chat_input("Напишите сообщение..."):user_avatar = "👑" if current_user == "kain" else "🎒"if chat_mode == "🏫 Чат с Учителем":chat_storage.teacher_messages.append({"name": current_user, "text": message, "avatar": user_avatar})with open(TEACHER_CHAT_FILE, "a", encoding="utf-8") as f: f.write(f"{current_user}|{message}|{user_avatar}\n")elif chat_mode == "🤫 Чат БЕЗ Учителя":chat_storage.messages.append({"name": current_user, "text": message, "avatar": user_avatar})with open(CHAT_FILE, "a", encoding="utf-8") as f: f.write(f"{current_user}|{message}|{user_avatar}\n")else:pair = tuple(sorted([current_user, dm_target]))private_list = load_private_chat(current_user, dm_target)private_list.append({"name": current_user, "text": message, "avatar": user_avatar})filename = os.path.join(BASE_DIR, f"private_{pair}_{pair}.txt")with open(filename, "a", encoding="utf-8") as f: f.write(f"{current_user}|{message}|{user_avatar}\n")st.rerun()else:st.error("❌ Доступ заблокирован! Неверный токен.", icon="🔒")
+            for msg in chat_storage.messages:
