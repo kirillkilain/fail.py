@@ -14,7 +14,7 @@ LOCAL_TZ = pytz.timezone("Asia/Yekaterinburg")
 # Пути к файлам в облаке
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CHAT_FILE = os.path.join(BASE_DIR, "chat_history.txt")
-TEACHER_CHAT_FILE = os.path.join(BASE_DIR, "teacher_chat_history.txt") # Файл для чата с учителем
+TEACHER_CHAT_FILE = os.path.join(BASE_DIR, "teacher_chat_history.txt")
 
 # ОБЩАЯ СВЕРХБЫСТРАЯ ПАМЯТЬ СЕРВЕРА
 @st.cache_resource
@@ -29,7 +29,7 @@ class SharedChat:
         self.casino_history = {}
         self.private_messages = {}
         
-        # 🔑 ТВОЯ ТАБЛИЦА ТОКЕНОВ
+        # 🔑 ТВОЯ ТАБЛИЦА ТОКЕНОВ ДЛЯ ВСЕГО КЛАССА
         self.tokens_db = {
             "boss_kain_777": "kain",
             "artem_key_31": "Артем 1",
@@ -69,7 +69,7 @@ def get_rank(username):
     if username not in chat_storage.tokens_db.values(): return "🔨 ЗАБАНЕН"
     if username in chat_storage.admins: return "🏆 Временный Админ"
     if username in chat_storage.moderators: return "⚡ Модератор (Мут)"
-    return "🎒 Обычный человек"
+    return "🎒 Обычный Человек" # Успешно заменили "Чебурек" на "Человек"! 👍
 
 def load_private_chat(u1, u2):
     pair = tuple(sorted([u1, u2]))
@@ -120,7 +120,7 @@ if user_token in chat_storage.tokens_db:
         chat_storage.user_statuses[current_user] = new_status
         st.rerun()
 
-    # --- КАЗИК РАЗ В ДЕНЬ (Работает только в комнате БЕЗ учителя, чтобы при ней не крутили!) ---
+    # --- КАЗИК РАЗ В ДЕНЬ (Только в чате БЕЗ учителя) ---
     if chat_mode == "🤫 Чат БЕЗ Учителя":
         st.sidebar.markdown("---")
         st.sidebar.markdown("### 🎰 Казик на Админки")
@@ -150,9 +150,9 @@ if user_token in chat_storage.tokens_db:
     # --- ГЛАВНЫЙ ПУЛЬТ СОЗДАТЕЛЯ (Только для реального kain) ---
     if real_user == "kain":
         st.sidebar.markdown("---")
-        st.sidebar.subheader("👑 ПУЛЬТ СОЗДАТЕЛЯ")а
+        st.sidebar.subheader("👑 ПУЛЬТ СОЗДАТЕЛЯ")
         target_user = st.sidebar.selectbox("Ученик:", [""] + active_names)
-        new_rank = st.sidebar.selectbox("Ранг:", ["Обычный человек", "Модератор (Мут)", "Временный Админ (Бан)"])
+        new_rank = st.sidebar.selectbox("Ранг:", ["Обычный Человек", "Модератор (Мут)", "Временный Админ (Бан)"])
         if target_user and st.sidebar.button("⭐ Применить ранг"):
             if target_user in chat_storage.moderators: chat_storage.moderators.remove(target_user)
             if target_user in chat_storage.admins: chat_storage.admins.remove(target_user)
@@ -205,3 +205,4 @@ if user_token in chat_storage.tokens_db:
     show_chat_history(chat_mode, dm_target)
     st.markdown("---")
 
+    # --- ОТПРАВКА СООБЩЕНИЯ ---
