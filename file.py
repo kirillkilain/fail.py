@@ -11,7 +11,7 @@ st.title("🔥 Чат Ферамир")
 # Твой часовой пояс (Пермский край)
 LOCAL_TZ = pytz.timezone("Asia/Yekaterinburg")
 
-# Пути к вечным файлам в облаке
+# Пути к файлам в облаке
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CHAT_FILE = os.path.join(BASE_DIR, "chat_history.txt")
 
@@ -27,6 +27,9 @@ class SharedChat:
         self.muted_users = [] 
         self.casino_history = {}
         
+        # Кэш для личных сообщений (чтобы не лагал диск)
+        self.private_messages = {} # {(user1, user2): [messages]}
+        
         # 🔑 ТВОЯ ТАБЛИЦА ТОКЕНОВ
         self.tokens_db = {
             "boss_kain_777": "kain",
@@ -38,7 +41,7 @@ class SharedChat:
             "markovka6583": "Марк"
         }
         
-        # Загружаем сообщения из файла ОДИН РАЗ при старте
+        # Загружаем общий чат из файла ОДИН РАЗ при старте
         self.messages = []
         if os.path.exists(CHAT_FILE):
             with open(CHAT_FILE, "r", encoding="utf-8") as f:
@@ -59,23 +62,52 @@ def get_rank(username):
     if username in chat_storage.moderators: return "⚡ Модератор (Мут)"
     return "🎒 Обычный Чебурек"
 
+# Вспомогательная функция для загрузки ЛС из файлов
+def load_private_chat(u1, u2):
+    pair = tuple(sorted([u1, u2]))
+    if pair in chat_storage.private_messages:
+        return chat_storage.private_messages[pair]
+    
+    chat_storage.private_messages[pair] = []
+    filename = os.path.join(BASE_DIR, f"private_{pair[0]}_{pair[1]}.txt")
+    if os.path.exists(filename):
+        with open(filename, "r", encoding="utf-8") as f:
+            for line in f.readlines():
+                if "|" in line:
+                    m_name, m_text, m_avatar = line.strip().split("|", 2)
+                    chat_storage.private_messages[pair].append({"name": m_name, "text": m_text, "avatar": m_avatar})
+    return chat_storage.private_messages[pair]
+
 # ЧИТАЕМ СЕКРЕТНЫЙ КЛЮЧ ИЗ ССЫЛКИ
 query_params = st.query_params
 user_token = query_params.get("token", None)
 
 if user_token in chat_storage.tokens_db:
     real_user = chat_storage.tokens_db[user_token]
-    if real_user == "kain" and chat_storage.fake_user:
-        current_user = chat_storage.fake_user
-    else:
-        current_user = real_user
+    current_user = chat_storage.fake_user if (real_user == "kain" and chat_storage.fake_user) else real_user
         
     st.sidebar.success(f"Вы вошли как: {current_user} 😎")
     
     # ОБНОВЛЯЕМ СТАТУС ОНЛАЙН
     chat_storage.online_users[real_user] = datetime.now(LOCAL_TZ)
 
+    # --- 🔀 ВЫБОР РЕЖИМА ЧАТА ---
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("📂 Выбор чата")
+    chat_mode = st.sidebar.radio("Куда зайти:", ["👥 Общий чат", "🔒 Личные сообщения (ЛС)"])
+    
+    active_names = [n for n in chat_storage.tokens_db.values() if n != "kain"]
+    all_names_for_dm = list(chat_storage.tokens_db.values())
+
+    if chat_mode == "🔒 Личные сообщения (ЛС)":
+        # Убираем себя из списка, кому можно написать ЛС
+        available_friends = [n for n in all_names_for_dm if n != current_user]
+        dm_target = st.sidebar.selectbox("С кем шепчемся:", available_friends)
+    else:
+        dm_target = None
+
     # --- ПРОФИЛЬ И СТАТУС ---
+    st.sidebar.markdown("---")
     st.sidebar.markdown(f"🎖️ Звание: **{get_rank(current_user)}**")
     if current_user in chat_storage.muted_users:
         st.sidebar.error("🔇 Ты в муте!")
@@ -95,7 +127,7 @@ if user_token in chat_storage.tokens_db:
     if last_spin_date == today_date and current_user != "kain":
         st.sidebar.warning("⏳ Слот заблокирован до завтра!")
     else:
-        if st.sidebar.button("🎰 Крутить слоты!"):
+        if st.sidebar.button("🎰 :grey_exclamation: Крутить слоты!"):
             chat_storage.casino_history[current_user] = today_date
             slots = ["🍒", "🍋", "💎", "7️⃣", "🍉"]
             res1, res2, res3 = random.choice(slots), random.choice(slots), random.choice(slots)
@@ -112,28 +144,6 @@ if user_token in chat_storage.tokens_db:
                 st.rerun()
             else:
                 st.sidebar.error("😢 Мимо! Попытка использована.")
-
-    # --- ПАНЕЛЬ МОДЕРАТОРА / АДМИНА ---
-    is_moderator = current_user in chat_storage.moderators
-    is_admin = current_user in chat_storage.admins
-    active_names = [n for n in chat_storage.tokens_db.values() if n != "kain"]
-    
-    if is_moderator or is_admin:
-        st.sidebar.markdown("---")
-        if is_moderator:
-            mute_target = st.sidebar.selectbox("Мут (Модератор):", [""] + active_names, key="mod_m")
-            if mute_target and st.sidebar.button("🔇 Мут", key="mod_m_btn"):
-                if mute_target not in chat_storage.muted_users:
-                    chat_storage.muted_users.append(mute_target)
-                    st.rerun()
-        if is_admin:
-            ban_target = st.sidebar.selectbox("Бан (Админ):", [""] + active_names, key="adm_b")
-            if ban_target and st.sidebar.button("🔨 Бан", key="adm_b_btn"):
-                if ban_target != "kain":
-                    tok = [k for k, v in chat_storage.tokens_db.items() if v == ban_target]
-                    if tok:
-                        del chat_storage.tokens_db[tok]
-                        st.rerun()
 
     # --- ГЛАВНЫЙ ПУЛЬТ СОЗДАТЕЛЯ (Только для реального kain) ---
     if real_user == "kain":
@@ -152,12 +162,6 @@ if user_token in chat_storage.tokens_db:
         target_prank = st.sidebar.selectbox("Маскировка под:", active_names)
         if st.sidebar.button("🕵️‍♂️ Маскировка"): chat_storage.fake_user = target_prank; st.rerun()
         if st.sidebar.button("❌ Сброс"): chat_storage.fake_user = ""; st.rerun()
-            
-        if st.sidebar.button("🧹 СБРОСИТЬ ВСЁ"):
-            chat_storage.moderators, chat_storage.admins, chat_storage.muted_users, chat_storage.casino_history = [], [], [], {}
-            chat_storage.messages = [{"name": "Система", "text": "Чат сброшен Создателем kain! 🧼", "avatar": "🤖"}]
-            if os.path.exists(CHAT_FILE): os.remove(CHAT_FILE)
-            st.rerun()
 
     # --- ОНЛАЙН СТАТУСЫ ---
     st.sidebar.markdown("---")
@@ -169,16 +173,27 @@ if user_token in chat_storage.tokens_db:
         else:
             st.sidebar.write(f"⚪ *{username}* (оффлайн) ({get_rank(username)})")
 
-    # --- 🔄 АВТО-ОБНОВЛЕНИЕ ЧАТА КАЖДЫЕ 4 СЕКУНДЫ (Из оперативной памяти, БЕЗ ЛАГОВ) ---
+    # --- 🔄 АВТО-ОБНОВЛЕНИЕ ЧАТА КАЖДЫЕ 4 СЕКУНДЫ ---
     @st.fragment(run_every="4s")
-    def show_chat():
-        st.subheader("📋 История сообщений")
-        for msg in chat_storage.messages:
-            with st.chat_message(msg["name"], avatar=msg["avatar"]):
-                st.write(f"**{msg['name']}** ({get_rank(msg['name'])})" if msg["name"] != "Система" else f"**{msg['name']}**")
-                st.write(msg["text"])
+    def show_chat_history(mode, target):
+        if mode == "👥 Общий чат":
+            st.subheader("📋 История общего чата")
+            for msg in chat_storage.messages:
+                with st.chat_message(msg["name"], avatar=msg["avatar"]):
+                    st.write(f"**{msg['name']}** ({get_rank(msg['name'])})" if msg["name"] != "Система" else f"**{msg['name']}**")
+                    st.write(msg["text"])
+        else:
+            st.subheader(f"🔒 Секретный диалог с: {target}")
+            private_list = load_private_chat(current_user, target)
+            if private_list:
+                for msg in private_list:
+                    with st.chat_message(msg["name"], avatar=msg["avatar"]):
+                        st.write(f"**{msg['name']}** ({get_rank(msg['name'])})")
+                        st.write(msg["text"])
+            else:
+                st.info("🤫 Тут пока пусто. Напишите первое секретное сообщение!")
 
-    show_chat()
+    show_chat_history(chat_mode, dm_target)
     st.markdown("---")
 
     # --- ОТПРАВКА СООБЩЕНИЯ ---
@@ -187,9 +202,20 @@ if user_token in chat_storage.tokens_db:
     else:
         if message := st.chat_input("Напишите сообщение..."):
             user_avatar = "👑" if current_user == "kain" else "🎒"
-            chat_storage.messages.append({"name": current_user, "text": message, "avatar": user_avatar})
-            with open(CHAT_FILE, "a", encoding="utf-8") as f:
-                f.write(f"{current_user}|{message}|{user_avatar}\n")
+            
+            if chat_mode == "👥 Общий чат":
+                chat_storage.messages.append({"name": current_user, "text": message, "avatar": user_avatar})
+                with open(CHAT_FILE, "a", encoding="utf-8") as f:
+                    f.write(f"{current_user}|{message}|{user_avatar}\n")
+            else:
+                # Запись в личные сообщения
+                pair = tuple(sorted([current_user, dm_target]))
+                private_list = load_private_chat(current_user, dm_target)
+                private_list.append({"name": current_user, "text": message, "avatar": user_avatar})
+                
+                filename = os.path.join(BASE_DIR, f"private_{pair[0]}_{pair[1]}.txt")
+                with open(filename, "a", encoding="utf-8") as f:
+                    f.write(f"{current_user}|{message}|{user_avatar}\n")
             st.rerun()
 
 else:
