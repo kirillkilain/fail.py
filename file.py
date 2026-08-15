@@ -150,9 +150,9 @@ if user_token in chat_storage.tokens_db:
     # --- ГЛАВНЫЙ ПУЛЬТ СОЗДАТЕЛЯ (Только для реального kain) ---
     if real_user == "kain":
         st.sidebar.markdown("---")
-        st.sidebar.subheader("👑 ПУЛЬТ СОЗДАТЕЛЯ")
+        st.sidebar.subheader("👑 ПУЛЬТ СОЗДАТЕЛЯ")а
         target_user = st.sidebar.selectbox("Ученик:", [""] + active_names)
-        new_rank = st.sidebar.selectbox("Ранг:", ["Обычный Чебурек", "Модератор (Мут)", "Временный Админ (Бан)"])
+        new_rank = st.sidebar.selectbox("Ранг:", ["Обычный человек", "Модератор (Мут)", "Временный Админ (Бан)"])
         if target_user and st.sidebar.button("⭐ Применить ранг"):
             if target_user in chat_storage.moderators: chat_storage.moderators.remove(target_user)
             if target_user in chat_storage.admins: chat_storage.admins.remove(target_user)
