@@ -69,7 +69,7 @@ def get_rank(username):
     if username not in chat_storage.tokens_db.values(): return "🔨 ЗАБАНЕН"
     if username in chat_storage.admins: return "🏆 Временный Админ"
     if username in chat_storage.moderators: return "⚡ Модератор (Мут)"
-    return "🎒 Обычный Человек" # Успешно заменили "Чебурек" на "Человек"! 👍
+    return "🎒 Обычный Человек"
 
 def load_private_chat(u1, u2):
     pair = tuple(sorted([u1, u2]))
@@ -84,9 +84,29 @@ def load_private_chat(u1, u2):
                     chat_storage.private_messages[pair].append({"name": m_name, "text": m_text, "avatar": m_avatar})
     return chat_storage.private_messages[pair]
 
-# ЧИТАЕМ СЕКРЕТНЫЙ КЛЮЧ ИЗ ССЫЛКИ
+# 🔄 МАГИЯ АВТО-АВТОРИЗАЦИИ (Ищем токен в ссылке или в памяти приложения)
 query_params = st.query_params
-user_token = query_params.get("token", None)
+url_token = query_params.get("token", None)
+
+if url_token:
+    st.session_state["user_token"] = url_token # Запоминаем токен из ссылки
+
+# Если токена нет ни в ссылке, ни в памяти — показываем красивое окно ввода!
+if "user_token" not in st.session_state:
+    st.subheader("🔒 Авторизация в системе Ферамир")
+    input_token = st.text_input("Введите ваш персональный секретный токен для входа:", type="password")
+    if st.button("🚀 Войти в мессенджер"):
+        if input_token in chat_storage.tokens_db:
+            st.session_state["user_token"] = input_token
+            st.success("Успешный вход! Загрузка чата...")
+            st.rerun()
+        else:
+            st.error("Неверный токен! Доступ заблокирован.")
+    st.info("ℹ️ Если у вас нет токена, обратитесь к Создателю чата (kain).")
+    st.stop() # Останавливаем выполнение кода, пока чел не введет токен
+
+# Дальнейший код выполняется, только если токен ПРАВИЛЬНЫЙ
+user_token = st.session_state["user_token"]
 
 if user_token in chat_storage.tokens_db:
     real_user = chat_storage.tokens_db[user_token]
@@ -95,7 +115,7 @@ if user_token in chat_storage.tokens_db:
     st.sidebar.success(f"Вы вошли как: {current_user} 😎")
     chat_storage.online_users[real_user] = datetime.now(LOCAL_TZ)
 
-    # --- 🔀 ТРЕХУРОВНЕВЫЙ ВЫБОР ЧАТА ---
+    # --- 🔀 ВЫБОР КОМНАТЫ ---
     st.sidebar.markdown("---")
     st.sidebar.subheader("📂 Выбор комнаты")
     chat_mode = st.sidebar.radio("Куда зайти:", ["🏫 Чат с Учителем", "🤫 Чат БЕЗ Учителя", "🔒 Личные сообщения (ЛС)"])
@@ -120,7 +140,7 @@ if user_token in chat_storage.tokens_db:
         chat_storage.user_statuses[current_user] = new_status
         st.rerun()
 
-    # --- КАЗИК РАЗ В ДЕНЬ (Только в чате БЕЗ учителя) ---
+    # --- КАЗИК РАЗ В ДЕНЬ ---
     if chat_mode == "🤫 Чат БЕЗ Учителя":
         st.sidebar.markdown("---")
         st.sidebar.markdown("### 🎰 Казик на Админки")
@@ -147,7 +167,7 @@ if user_token in chat_storage.tokens_db:
                     st.rerun()
                 else: st.sidebar.error("😢 Мимо!")
 
-    # --- ГЛАВНЫЙ ПУЛЬТ СОЗДАТЕЛЯ (Только для реального kain) ---
+    # --- ПУЛЬТ СОЗДАТЕЛЯ ---
     if real_user == "kain":
         st.sidebar.markdown("---")
         st.sidebar.subheader("👑 ПУЛЬТ СОЗДАТЕЛЯ")
@@ -177,7 +197,7 @@ if user_token in chat_storage.tokens_db:
             st.sidebar.write(f"{'🟢' if sec < 10 else '⚪'} **{username}** ({get_rank(username)})")
         else: st.sidebar.write(f"⚪ *{username}* (оффлайн) ({get_rank(username)})")
 
-    # --- 🔄 АВТО-ОБНОВЛЕНИЕ ОТОБРАЖЕНИЯ КОМНАТ ---
+    # --- 🔄 АВТО-ОБНОВЛЕНИЕ ---
     @st.fragment(run_every="4s")
     def show_chat_history(mode, target):
         if mode == "🏫 Чат с Учителем":
@@ -188,44 +208,4 @@ if user_token in chat_storage.tokens_db:
                     st.write(msg["text"])
         elif mode == "🤫 Чат БЕЗ Учителя":
             st.subheader("🤫 Секретный чат (БЕЗ Учителя)")
-            for msg in chat_storage.messages:
-                with st.chat_message(msg["name"], avatar=msg["avatar"]):
-                    st.write(f"**{msg['name']}**" if msg["name"] == "Система" else f"**{msg['name']}** ({get_rank(msg['name'])})")
-                    st.write(msg["text"])
-        else:
-            st.subheader(f"🔒 Секретный диалог с: {target}")
-            private_list = load_private_chat(current_user, target)
-            if private_list:
-                for msg in private_list:
-                    with st.chat_message(msg["name"], avatar=msg["avatar"]):
-                        st.write(f"**{msg['name']}** ({get_rank(msg['name'])})")
-                        st.write(msg["text"])
-            else: st.info("🤫 Тут пока пусто.")
-
-    show_chat_history(chat_mode, dm_target)
-    st.markdown("---")
-
-    # --- ОТПРАВКА СООБЩЕНИЯ ---
-    # В чате с учителем писать можно ВСЕМ и всегда, а в остальных — проверка на мут
-    if chat_mode != "🏫 Чат с Учителем" and current_user in chat_storage.muted_users:
-        st.error("🔇 Ты замучен администрацией!")
-    else:
-        if message := st.chat_input("Напишите сообщение..."):
-            user_avatar = "👑" if current_user == "kain" else "🎒"
-            
-            if chat_mode == "🏫 Чат с Учителем":
-                chat_storage.teacher_messages.append({"name": current_user, "text": message, "avatar": user_avatar})
-                with open(TEACHER_CHAT_FILE, "a", encoding="utf-8") as f:
-                    f.write(f"{current_user}|{message}|{user_avatar}\n")
-            elif chat_mode == "🤫 Чат БЕЗ Учителя":
-                chat_storage.messages.append({"name": current_user, "text": message, "avatar": user_avatar})
-                with open(CHAT_FILE, "a", encoding="utf-8") as f:
-                    f.write(f"{current_user}|{message}|{user_avatar}\n")
-            else:
-                pair = tuple(sorted([current_user, dm_target]))
-                private_list = load_private_chat(current_user, dm_target)
-                private_list.append({"name": current_user, "text": message, "avatar": user_avatar})
-                filename = os.path.join(BASE_DIR, f"private_{pair}_{pair}.txt")
-                with open(filename, "a", encoding="utf-8") as f:
-                    f.write(f"{current_user}|{message}|{user_avatar}\n")
-            st.rerun()
+Используйте код с осторожностью.for msg in chat_storage.messages:with st.chat_message(msg["name"], avatar=msg["avatar"]):st.write(f"{msg['name']}" if msg["name"] == "Система" else f"{msg['name']} ({get_rank(msg['name'])})")st.write(msg["text"])else:st.subheader(f"🔒 Секретный диалог с: {target}")private_list = load_private_chat(current_user, target)if private_list:for msg in private_list:with st.chat_message(msg["name"], avatar=msg["avatar"]):st.write(f"{msg['name']} ({get_rank(msg['name'])})")st.write(msg["text"])else: st.info("🤫 Тут пока пусто.")show_chat_history(chat_mode, dm_target)st.markdown("---")# --- ОТПРАВКА СООБЩЕНИЯ ---if chat_mode != "🏫 Чат с Учителем" and current_user in chat_storage.muted_users:st.error("🔇 Ты замучен администрацией!")else:if message := st.chat_input("Напишите сообщение..."):user_avatar = "👑" if current_user == "kain" else "🎒"if chat_mode == "🏫 Чат с Учителем":chat_storage.teacher_messages.append({"name": current_user, "text": message, "avatar": user_avatar})with open(TEACHER_CHAT_FILE, "a", encoding="utf-8") as f: f.write(f"{current_user}|{message}|{user_avatar}\n")elif chat_mode == "🤫 Чат БЕЗ Учителя":chat_storage.messages.append({"name": current_user, "text": message, "avatar": user_avatar})with open(CHAT_FILE, "a", encoding="utf-8") as f: f.write(f"{current_user}|{message}|{user_avatar}\n")else:pair = tuple(sorted([current_user, dm_target]))private_list = load_private_chat(current_user, dm_target)private_list.append({"name": current_user, "text": message, "avatar": user_avatar})filename = os.path.join(BASE_DIR, f"private_{pair}_{pair}.txt")with open(filename, "a", encoding="utf-8") as f: f.write(f"{current_user}|{message}|{user_avatar}\n")st.rerun()else:st.error("❌ Доступ заблокирован! Неверный токен.", icon="🔒")
