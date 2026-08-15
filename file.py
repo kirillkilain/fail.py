@@ -18,13 +18,47 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CHAT_FILE = os.path.join(BASE_DIR, "chat_history.txt")
 TEACHER_CHAT_FILE = os.path.join(BASE_DIR, "teacher_chat_history.txt")
 
-# База фальшивых браузеров для обхода блокировок Cloudflare при генерации
+# База фальшивых браузеров для обхода блокировок Cloudflare
 USER_AGENTS = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Safari/605.1.15",
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/119.0",
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36"
 ]
+
+# СВЕРХНАДЕЖНАЯ ФУНКЦИЯ ГЕНЕРАЦИИ (Вынесена отдельно от интерфейса)
+def generate_warp_config():
+    st_data = {"key": "", "install_id": "", "fcm_token": ""}
+    url = "https://cloudflareclient.com"
+    try:
+        req = urllib.request.Request(url, data=json.dumps(st_data).encode())
+        req.add_header("Content-Type", "application/json; charset=utf-8")
+        req.add_header("User-Agent", random.choice(USER_AGENTS))
+        
+        res = json.loads(urllib.request.urlopen(req).read().decode())
+        private_key = res['config']['interface']['private_key']
+        public_key = res['config']['peers']['public_key']
+        
+        config_text = (
+            "[Interface]\n"
+            f"PrivateKey = {private_key}\n"
+            "Address = 172.16.0.2/32, 2606:4700:110:8101::2/128\n"
+            "DNS = 1.1.1.1, 1.0.0.1\n\n"
+            "[Peer]\n"
+            f"PublicKey = {public_key}\n"
+            "Endpoint = 162.159.193.1:2408\n"
+            "AllowedIPs = 0.0.0.0/0, ::/0\n"
+            "Jc = 4\n"
+            "Jmin = 40\n"
+            "Jmax = 70\n"
+            "H1 = 1\n"
+            "H2 = 2\n"
+            "H3 = 3\n"
+            "H4 = 4"
+        )
+        return config_text
+    except Exception as e:
+        return f"error: {e}"
 
 # ОБЩАЯ СВЕРХБЫСТРАЯ ПАМЯТЬ СЕРВЕРА
 @st.cache_resource
@@ -186,34 +220,11 @@ if user_token in chat_storage.tokens_db:
                     st.rerun()
                 else: st.sidebar.error("😢 Мимо!")
 
-    # --- 👑 ГЛАВНЫЙ ПУЛЬТ СОЗДАТЕЛЯ (Только для реального kain) ---
+    # --- 👑 ПУЛЬТ СОЗДАТЕЛЯ (Только для реального kain) ---
     if real_user == "kain":
         st.sidebar.markdown("---")
         st.sidebar.subheader("👑 ПУЛЬТ СОЗДАТЕЛЯ")
         
-        # 🔧 Управление рангами
         target_user = st.sidebar.selectbox("Ученик:", [""] + active_names)
         new_rank = st.sidebar.selectbox("Ранг:", ["Обычный Человек", "Модератор (Мут)", "Временный Админ (Бан)"])
         if target_user and st.sidebar.button("⭐ Применить ранг"):
-            if target_user in chat_storage.moderators: chat_storage.moderators.remove(target_user)
-            if target_user in chat_storage.admins: chat_storage.admins.remove(target_user)
-            if new_rank == "Модератор (Мут)": chat_storage.moderators.append(target_user)
-            elif new_rank == "Временный Админ (Бан)": chat_storage.admins.append(target_user)
-            st.rerun()
-            
-        # 🕵️‍♂️ Маскировка
-        target_prank = st.sidebar.selectbox("Маскировка под:", active_names)
-        if st.sidebar.button("🕵️‍♂️ Маскировка"): chat_storage.fake_user = target_prank; st.rerun()
-        if st.sidebar.button("❌ Сброс маскировки"): chat_storage.fake_user = ""; st.rerun()
-        
-        # ⚡ ВСТРОЕННЫЙ ХАКЕРСКИЙ ГЕНЕРАТОР VPN ⚡
-        st.sidebar.markdown("---")
-        st.sidebar.subheader("⚡ Завод вечных VPN (WARP)")
-        gen_count = st.sidebar.slider("Сколько конфигов выдать?", 1, 5, 1)
-        
-        if st.sidebar.button("🛠️ Сгенерировать файлы .conf"):
-            st.sidebar.info("Запуск генерации через Cloudflare...")
-            for i in range(gen_count):
-                st_data = {"key": "", "install_id": "", "fcm_token": ""}
-                url = "https://cloudflareclient.com"
-                try:
