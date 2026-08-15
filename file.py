@@ -81,7 +81,7 @@ if user_token in chat_storage.tokens_db:
         st.sidebar.error("🔇 Ты в муте!")
     
     current_status = chat_storage.user_statuses.get(current_user, "")
-    new_status = st.sidebar.text_input("Твой status:", value=current_status, max_chars=30)
+    new_status = st.sidebar.text_input("Твой статус:", value=current_status, max_chars=30)
     if new_status != current_status:
         chat_storage.user_statuses[current_user] = new_status
         st.rerun()
@@ -132,7 +132,7 @@ if user_token in chat_storage.tokens_db:
                 if ban_target != "kain":
                     tok = [k for k, v in chat_storage.tokens_db.items() if v == ban_target]
                     if tok:
-                        del chat_storage.tokens_db[tok[0]]
+                        del chat_storage.tokens_db[tok]
                         st.rerun()
 
     # --- ГЛАВНЫЙ ПУЛЬТ СОЗДАТЕЛЯ (Только для реального kain) ---
@@ -169,17 +169,16 @@ if user_token in chat_storage.tokens_db:
         else:
             st.sidebar.write(f"⚪ *{username}* (оффлайн) ({get_rank(username)})")
 
-    # --- СВЕРХБЫСТРЫЙ ВЫВОД ЧАТА (Из памяти сервера) ---
-    st.subheader("📋 История сообщений")
-    
-    if st.button("🔄 Проверить новые сообщения"):
-        st.rerun()
-        
-    for msg in chat_storage.messages:
-        with st.chat_message(msg["name"], avatar=msg["avatar"]):
-            st.write(f"**{msg['name']}** ({get_rank(msg['name'])})" if msg["name"] != "Система" else f"**{msg['name']}**")
-            st.write(msg["text"])
+    # --- 🔄 АВТО-ОБНОВЛЕНИЕ ЧАТА КАЖДЫЕ 4 СЕКУНДЫ (Из оперативной памяти, БЕЗ ЛАГОВ) ---
+    @st.fragment(run_every="4s")
+    def show_chat():
+        st.subheader("📋 История сообщений")
+        for msg in chat_storage.messages:
+            with st.chat_message(msg["name"], avatar=msg["avatar"]):
+                st.write(f"**{msg['name']}** ({get_rank(msg['name'])})" if msg["name"] != "Система" else f"**{msg['name']}**")
+                st.write(msg["text"])
 
+    show_chat()
     st.markdown("---")
 
     # --- ОТПРАВКА СООБЩЕНИЯ ---
