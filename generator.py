@@ -10,7 +10,7 @@ st.set_page_config(page_title="WG Генератор 100", page_icon="⚡", layo
 st.title("⚡ Промышленный Генератор конфигов AmneziaWG")
 st.write("Штампуй до 100 ОФИЦИАЛЬНЫХ и рабочих туннелей за один клик!")
 
-count = st.slider("Сколько конфигов создать за один клик?", min_value=1, max_value=100, value=5)
+count = st.slider("Сколько конфигов создать за один клик?", min_value=1, max_value=20000, value=5)
 
 if st.button("🚀 ЗАПУСТИТЬ МЕГА-ГЕНЕРАЦИЮ"):
     progress_bar = st.progress(0)
