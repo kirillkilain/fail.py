@@ -26,7 +26,7 @@ def generate_wg_keys():
     
     return private_key, public_key
 
-count = st.slider("Сколько конфигов создать за один клик?", min_value=1, max_value=10000, value=5)
+count = st.slider("Сколько конфигов создать за один клик?", min_value=1, max_value=20000, value=5)
 
 if st.button("🚀 ЗАПУСТИТЬ МЕГА-ГЕНЕРАЦИЮ"):
     progress_bar = st.progress(0)
