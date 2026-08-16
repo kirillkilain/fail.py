@@ -10,20 +10,17 @@ st.set_page_config(page_title="WG Генератор 100", page_icon="⚡", layo
 st.title("⚡ Промышленный Генератор конфигов AmneziaWG")
 st.write("Штампуй до 100 вечных туннелей AmneziaWG за один клик и скачивай одним архивом!")
 
-# Функция генерации пары ключей X25519 (ИСПРАВЛЕННЫЙ ВАРИАНТ)
+# Функция генерации пары ключей X25519
 def generate_wg_keys():
-    # Получаем случайные 32 байта и СРАЗУ переводим в изменяемый массив bytearray
     private_bytes = bytearray(os.urandom(32))
     
-    # Теперь побитовые операции работают идеально без ошибок типа TypeError!
+    # Применяем битовые маски к первому байту массива (вместо всего bytearray)
     private_bytes[0] &= 248
     private_bytes[31] &= 127
     private_bytes[31] |= 64
     
-    # Кодируем в стандартный Base64 для WireGuard
     private_key = base64.b64encode(bytes(private_bytes)).decode('utf-8')
     
-    # Генерируем случайный публичный ключ для структуры туннеля
     public_bytes = os.urandom(32)
     public_key = base64.b64encode(public_bytes).decode('utf-8')
     
@@ -43,6 +40,9 @@ if st.button("🚀 ЗАПУСТИТЬ МЕГА-ГЕНЕРАЦИЮ"):
     
     # Создаем виртуальный архив прямо в оперативной памяти сервера
     zip_buffer = io.BytesIO()
+    
+    # Контейнер для спойлеров, который мы отрисуем позже
+    configs_data = []
     
     with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED) as zip_file:
         for i in range(count):
@@ -69,16 +69,15 @@ if st.button("🚀 ЗАПУСТИТЬ МЕГА-ГЕНЕРАЦИЮ"):
             # Добавляем текстовый конфиг внутрь нашего ZIP-архива
             zip_file.writestr(f"warp_{i+1}.conf", config_text)
             
-            # Выводим превью под спойлер
-            with st.expander(f"📄 Конфигурация №{i+1}"):
-                st.code(config_text, language="ini")
+            # Сохраняем текст для вывода в спойлеры
+            configs_data.append(config_text)
                 
             progress_bar.progress((i + 1) / count)
             
     st.success(f"✨ Сверхскоростная генерация завершена! Создано файлов: {count}")
     st.balloons() # Праздничные шарики!
     
-    # ГЛАВНАЯ КНОПКА СКАЧИВАНИЯ ВСЕГО АРХИВА
+    # 🔥🔥🔥 ГЛАВНАЯ КНОПКА ТЕПЕРЬ ТУТ — НА САМОМ ВЕРХУ, ПРЕДВАРИТЕЛЬНО ПЕРЕД СПОЙЛЕРАМИ!
     st.download_button(
         label="🎁 СКАЧАТЬ ВСЕ КОНФИГИ ОДНИМ ZIP-АРХИВОМ",
         data=zip_buffer.getvalue(),
@@ -86,3 +85,11 @@ if st.button("🚀 ЗАПУСТИТЬ МЕГА-ГЕНЕРАЦИЮ"):
         mime="application/zip",
         use_container_width=True
     )
+    
+    st.markdown("---")
+    st.write("📋 Список созданных конфигураций (для ручного копирования):")
+    
+    # Отрисовываем спойлеры в самом низу страницы
+    for idx, config_text in enumerate(configs_data):
+        with st.expander(f"📄 Конфигурация №{idx+1}"):
+            st.code(config_text, language="ini")
