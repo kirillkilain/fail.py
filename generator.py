@@ -10,23 +10,25 @@ st.set_page_config(page_title="WG Оптимизированный", page_icon="
 st.title("⚡ Промышленный Супер-Генератор AmneziaWG")
 st.write("Конвейер оптимизирован! Штампуй тысячи файлов в ZIP без лагов браузера.")
 
-# Сверхбыстрая функция генерации пары ключей X25519 в памяти
+# Сверхбыстрая функция генерации пары ключей X25519 в памяти (ИСПРАВЛЕНО!)
 def generate_wg_keys():
     private_bytes = bytearray(os.urandom(32))
-    private_bytes &= 248
-    private_bytes &= 127
-    private_bytes |= 64
+    
+    # 🔧 Правильное побитовое изменение конкретных байтов массива по индексам:
+    private_bytes[0] &= 248
+    private_bytes[31] &= 127
+    private_bytes[31] |= 64
+    
     private_key = base64.b64encode(bytes(private_bytes)).decode('utf-8')
     
     public_bytes = os.urandom(32)
     public_key = base64.b64encode(public_bytes).decode('utf-8')
     return private_key, public_key
 
-# Ползунок с лимитом до 20к или 50к (вручную вводим цифру для удобства)
+# Удобный ввод числа
 count = st.number_input("Сколько конфигов упаковать в ZIP-архив?", min_value=1, max_value=50000, value=20000, step=1000)
 
 if st.button("🚀 ЗАПУСТИТЬ ТУРБО-ГЕНЕРАЦИЮ"):
-    # Создаем пустой контейнер, чтобы красиво показать только полосу загрузки
     status_text = st.empty()
     progress_bar = st.progress(0)
     
@@ -38,10 +40,8 @@ if st.button("🚀 ЗАПУСТИТЬ ТУРБО-ГЕНЕРАЦИЮ"):
     ]
     
     zip_buffer = io.BytesIO()
-    
     status_text.info("🏭 Завод запущен... Собираем файлы прямо в архив...")
     
-    # Запускаем чистый цикл без вывода графики на экран
     with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED) as zip_file:
         for i in range(count):
             private_key, public_key = generate_wg_keys()
@@ -65,17 +65,15 @@ if st.button("🚀 ЗАПУСТИТЬ ТУРБО-ГЕНЕРАЦИЮ"):
                 "H4 = 4"
             )
             
-            # Пишем файл прямо в ZIP
             zip_file.writestr(f"warp_{i+1}.conf", config_text)
             
-            # Обновляем прогресс-бар не каждый раз, а шагами, чтобы сайт не вис
+            # Обновляем прогресс-бар шагами по 500 файлов, чтобы страница не зависала
             if i % 500 == 0 or i == count - 1:
                 progress_bar.progress((i + 1) / count)
                 
-    status_text.success(f"✨ Турбо-генерация завершена! Успешно упаковано файлов: {count}")
+    status_text.success(f"✨  Турбо-генерация завершена! Успешно упаковано файлов: {count}")
     st.balloons()
     
-    # ОГРОМНАЯ КНОПКА СКАЧИВАНИЯ СРАЗУ ПОД ИТОГОМ
     st.download_button(
         label="🎁 СКАЧАТЬ ВЕСЬ ПАК ОДНИМ ZIP-АРХИВОМ",
         data=zip_buffer.getvalue(),
