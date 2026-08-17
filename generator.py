@@ -24,7 +24,7 @@ def generate_wg_keys():
     return private_key, public_key
 
 # Удобный ввод числа
-count = st.number_input("Сколько конфигов упаковать в ZIP-архив?", min_value=1, max_value=100000, value=100, step=100)
+count = st.number_input("Сколько конфигов упаковать в ZIP-архив?", min_value=1, max_value=10000000, value=100, step=100)
 
 if st.button("🚀 ЗАПУСТИТЬ ТУРБО-ГЕНЕРАЦИЮ"):
     status_text = st.empty()
