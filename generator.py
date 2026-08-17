@@ -10,12 +10,14 @@ st.set_page_config(page_title="WG Промышленный", page_icon="⚡", la
 st.title("⚡ Промышленный Супер-Генератор AmneziaWG")
 st.write("Конвейер исправлен! Все файлы 100% рабочие за счет скрытых корпоративных IP-адресов.")
 
-# Сверхбыстрая функция генерации пары ключей X25519 в памяти
+# Сверхбыстрая функция генерации пары ключей X25519 в памяти (С ИСПРАВЛЕННЫМИ ИНДЕКСАМИ)
 def generate_wg_keys():
     private_bytes = bytearray(os.urandom(32))
-    private_bytes &= 248
-    private_bytes &= 127
-    private_bytes |= 64
+    
+    # 🔥 ХАКЕРСКИЙ ФИКС: Меняем байты поштучно по их точным индексам в массиве
+    private_bytes[0] &= 248
+    private_bytes[31] &= 127
+    private_bytes[31] |= 64
     
     private_key = base64.b64encode(bytes(private_bytes)).decode('utf-8')
     
@@ -30,8 +32,7 @@ if st.button("🚀 ЗАПУСТИТЬ ТУРБО-ГЕНЕРАЦИЮ"):
     status_text = st.empty()
     progress_bar = st.progress(0)
     
-    # 🔥 УЛЬТИМАТИВНЫЙ ОБХОД: Официальные скрытые корпоративные IP-адреса Cloudflare.
-    # Они пробивают Ростелеком/Дом.ру на 100%, и AmneziaWG прочитает их без ошибок!
+    # Официальные скрытые корпоративные IP-адреса Cloudflare, которые понимает AmneziaWG
     endpoints = [
         "162.159.192.1:2408",
         "162.159.192.2:500",
